@@ -2,9 +2,9 @@
 
 A runnable, end-to-end recommendation system demo covering **retrieval,
 ranking, personalization, and product-constraint handling** — the core
-concepts in a Wolt/DoorDash-style Applied Scientist (Recommendations) role.
+concepts for building recommendation systems.
 
-It uses **synthetic data** (no real Wolt data), generated with realistic
+It uses **synthetic data** (no real data), generated with realistic
 structure: users have latent cuisine preferences, restaurants have popularity
 and availability windows, and interactions are simulated with a separate
 *exposure* model (what gets shown) and *outcome* model (does it convert to an
@@ -155,13 +155,12 @@ Run `git show <hash>` on any commit to see that component's diff, or
 | **Offline evaluation rigor** | Time-based (not random) train/test split to avoid leakage; Recall@K / NDCG@K / MAP@K implemented from scratch in `evaluate.py`. |
 | **Online experiment interpretation** | A toy Inverse Propensity Scoring (IPS) estimator, illustrating the offline-estimate-before-you-ship technique — explicitly flagged as **not** a substitute for a real A/B test. |
 
-## Honest caveats (worth saying out loud in an interview)
+## Honest caveats
 
-- **This is synthetic data with a hand-built generative process** — it's built to have learnable structure, not to prove any specific algorithm is "best." Real Wolt data would have much messier, sparser, and non-stationary signal.
+- **This is synthetic data with a hand-built generative process** — it's built to have learnable structure, not to prove any specific algorithm is "best." Real data would have much messier, sparser, and non-stationary signal.
 - **Sample sizes here are small** (1500 users, 400 restaurants), so metric differences between methods can be noisy run-to-run — in a real setting you'd want confidence intervals or a proper significance test before concluding one approach beats another.
 - **The IPS online-lift estimate is illustrative only.** Real causal estimates need correctly-logged propensities from the actual serving policy, and should still be validated with a live experiment before a launch decision.
 - **The bandit simulation uses a small restaurant pool** (60 of the 400 restaurants) so it converges within a reasonable number of simulated rounds — a real deployment would need either far more rounds or a smarter exploration strategy at full catalog scale.
-- **"Monitoring production performance"** (a JD line item) genuinely isn't demonstrated here — that requires real production logging/dashboarding infrastructure that doesn't make sense to fake in an offline demo.
 
 ## Extending this further
 
