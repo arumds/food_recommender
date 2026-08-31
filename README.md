@@ -176,4 +176,4 @@ Run `git show <hash>` on any commit to see that component's diff, or
   model to compromise between goals it wasn't designed to balance.
 - Swap in a real public dataset (Yelp Open Dataset, Instacart, H&M) instead of synthetic data.
 - Add a sequence-aware model (e.g. a simple GRU/SASRec-style session encoder) to capture *intent within a session*, not just static affinity.
-- Add basic monitoring/dashboarding around `app.py` (request latency percentiles, feature drift, model staleness alerts) to speak to the "production deployment and monitoring" part of the JD.
+- Add basic monitoring/dashboarding around `app.py` (request latency percentiles, feature drift, model staleness alerts) to speak to the "production deployment and monitoring".
