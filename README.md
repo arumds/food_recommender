@@ -75,10 +75,7 @@ no separate training step to remember to run.
 
 ## Serving this online (minimal demo)
 
-`main.py` is a batch/offline script — it evaluates the architecture and
-saves model artifacts in one run, but doesn't expose anything as a live
-service itself. `app.py` is a separate, minimal demonstration of what 
-serving those artifacts for real would look like:
+`app.py` is a minimal demonstration of what serving those artifacts for real would look like:
 
 ```bash
 python3 src/data_gen.py    # if you haven't already
