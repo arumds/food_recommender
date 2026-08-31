@@ -97,7 +97,7 @@ async def lifespan(app: FastAPI):
     STATE.clear()
 
 
-app = FastAPI(title="Wolt-style Recommendation API (demo)", lifespan=lifespan)
+app = FastAPI(title="PlateMatch - Matching users to restaurants/dishes, Recommendation API (demo)", lifespan=lifespan)
 
 
 @app.get("/health")
