@@ -7,15 +7,22 @@ main_v2.py -- the single, complete pipeline covering every stage:
   Personalization  : MMoE multi-task scoring + LinUCB contextual bandit re-ranking
   Online eval      : simulated IPS estimator (offline-estimate-before-you-ship)
 
+This script also SAVES the trained retrieval (Two-Tower + FAISS) and ranking
+(LambdaMART) artifacts to models/ -- the same artifacts serve.py loads to
+answer live requests. Evaluation and artifact-saving happen in one run so
+you get both the metrics and a servable model from a single script.
+
 This script loads data from disk via data_loader.py -- it does not generate
 any data itself. Run `python3 src/data_gen.py` first if you haven't already.
 
 Run: python3 src/main_v2.py
+Then: python3 src/serve.py
 """
 import os
 import sys
 import json
 import numpy as np
+import faiss
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -31,6 +38,7 @@ from sklearn.metrics import roc_auc_score
 
 RESULTS = {}
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "outputs")
+MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models")
 
 
 def section(title):
@@ -87,6 +95,25 @@ def main():
     RESULTS["ranking_lambdamart"] = ranker_metrics
 
     # =================================================================
+    section("SAVING MODEL ARTIFACTS (for serve.py)")
+    # =================================================================
+    # Persist exactly what serve.py needs to answer live requests: the precomputed
+    # user/item embeddings, the FAISS index already built above (no need to rebuild
+    # it), the trained ranker, and the feature column order. This is the same
+    # offline-training-produces-an-artifact pattern as data_gen.py producing CSVs
+    # for the pipeline to load -- train once here, load repeatedly in serve.py.
+    os.makedirs(MODELS_DIR, exist_ok=True)
+    np.save(os.path.join(MODELS_DIR, "user_embeddings.npy"), tt.user_emb.astype(np.float32))
+    np.save(os.path.join(MODELS_DIR, "item_embeddings.npy"), tt.item_emb.astype(np.float32))
+    faiss.write_index(hnsw_index.index, os.path.join(MODELS_DIR, "restaurant_index.faiss"))
+    ranker.save_model(os.path.join(MODELS_DIR, "ranker.txt"))
+    with open(os.path.join(MODELS_DIR, "feature_cols.json"), "w") as f:
+        json.dump(feature_cols, f)
+    print(f"Saved retrieval + ranking artifacts to: {MODELS_DIR}")
+    print("  user_embeddings.npy, item_embeddings.npy, restaurant_index.faiss, "
+          "ranker.txt, feature_cols.json")
+
+    # =================================================================
     section("CONSTRAINTS: availability, diversity (MMR), business boost")
     # =================================================================
     sample_uid = eval_users_list[0]
@@ -116,7 +143,6 @@ def main():
     }
 
     # =================================================================
-   
     section("PERSONALIZATION: LinUCB contextual bandit re-ranking")
     # =================================================================
     small_restaurants = restaurants.sample(60, random_state=1).reset_index(drop=True)
@@ -157,9 +183,10 @@ def main():
     # =================================================================
     print(json.dumps(RESULTS, indent=2, default=str))
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    with open(os.path.join(OUTPUT_DIR, "results_summary_v2.json"), "w") as f:
+    with open(os.path.join(OUTPUT_DIR, "results_summary.json"), "w") as f:
         json.dump(RESULTS, f, indent=2, default=str)
     print(f"\nSaved to {os.path.join(OUTPUT_DIR, 'results_summary.json')}")
+    print(f"Trained models saved to {MODELS_DIR}")
 
 
 if __name__ == "__main__":
