@@ -46,6 +46,17 @@ simulation), prints a full report to stdout, and saves
 
 ## What the pipeline covers
 
+```mermaid
+flowchart TD
+    A[data/*.csv] --> B[Two-Tower + FAISS<br/>retrieval]
+    B --> C[LambdaMART<br/>ranking]
+    C --> D[Evaluation<br/>constraints + bandit + IPS]
+    C --> E[(models/ artifacts)]
+    E --> F[FAISS lookup<br/>&lt;1ms]
+    F --> G[LambdaMART score<br/>~5-10ms]
+    G --> H[Filter + diversify<br/>~3-5ms]
+    H --> I[JSON response<br/>~10-15ms total]
+```
 One script, `main.py`, runs every stage in order:
 
 | Stage | Objective | Model(s) used |
