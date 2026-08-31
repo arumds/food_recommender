@@ -1,4 +1,4 @@
-# Personalized Restaurant Discovery Pipeline
+# PlateMatch - matching users to restaurants/dishes Recommendation System
 
 A runnable, end-to-end recommendation system demo covering **retrieval,
 ranking, personalization, and product-constraint handling** — the core
