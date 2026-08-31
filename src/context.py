@@ -1,22 +1,3 @@
-"""
-Synthetic real-time CONTEXT for the personalization / re-ranking layer.
-
-This is deliberately separate from the static features used in retrieval/ranking
-(user affinity, restaurant popularity, etc.) -- context here means signals that
-change per-request, independent of who the user is:
-
-  - weather        : sunny / rainy / cold / hot
-  - time_of_day     : breakfast / lunch / afternoon / dinner / late_night
-  - is_repeat_customer : proxy for "order status" -- whether this user has
-                          ordered from this exact restaurant before (affects how
-                          much exploration vs. exploitation makes sense)
-  - has_discount    : whether a restaurant currently has an active promotion
-
-A true reward function ties context to which cuisines actually perform better
-right now (rainy day -> soup/curry/comfort food; hot weather -> salads/sushi;
-late night -> burgers/kebab), so a context-aware re-ranker has real signal to
-exploit that a static ranker cannot see.
-"""
 import numpy as np
 
 CUISINES = [

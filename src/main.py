@@ -1,23 +1,3 @@
-"""
-main_v2.py -- the single, complete pipeline covering every stage:
-
-  Retrieval        : Two-Tower NN + FAISS HNSW (behavioral candidate generation)
-  Ranking          : LightGBM LambdaMART
-  Constraints      : availability filtering + MMR diversity + business-rule boosting
-  Personalization  : MMoE multi-task scoring + LinUCB contextual bandit re-ranking
-  Online eval      : simulated IPS estimator (offline-estimate-before-you-ship)
-
-This script also SAVES the trained retrieval (Two-Tower + FAISS) and ranking
-(LambdaMART) artifacts to models/ -- the same artifacts serve.py loads to
-answer live requests. Evaluation and artifact-saving happen in one run so
-you get both the metrics and a servable model from a single script.
-
-This script loads data from disk via data_loader.py -- it does not generate
-any data itself. Run `python3 src/data_gen.py` first if you haven't already.
-
-Run: python3 src/main_v2.py
-Then: python3 src/serve.py
-"""
 import os
 import sys
 import json
