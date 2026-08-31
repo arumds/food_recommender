@@ -1,26 +1,3 @@
-"""
-FAISS-backed approximate nearest neighbor retrieval.
-
-Wraps precomputed item embeddings (from the two-tower model, or any other
-embedding source) in a FAISS index for fast candidate generation. Two index
-types are provided:
-
-- FlatIPRetriever : exact inner-product search (same math as brute force, but
-                    using FAISS's optimized implementation) -- good baseline
-                    and correctness check for the approximate index below.
-- HNSWRetriever    : Hierarchical Navigable Small World graph index --
-                    approximate nearest neighbor search that scales to
-                    millions of items with sub-linear query time, at the cost
-                    of a small recall drop vs. exact search. This is the
-                    index type actually used in production-scale retrieval
-                    systems (item catalog too large for brute-force search
-                    per request).
-
-At the ~500-item scale of this demo, exact and approximate search are nearly
-identical in recall and latency -- the point of including both is to
-demonstrate the API and reasoning, and to measure the recall/speed tradeoff
-that becomes decisive at real catalog sizes (10,000-1,000,000+ items).
-"""
 import time
 import numpy as np
 import faiss

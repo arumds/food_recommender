@@ -1,17 +1,3 @@
-"""
-Ranking stage: given the ~50-100 candidates retrieval produced for a user,
-learn to ORDER them by relevance. This is where most of the "recommendation
-quality" work in a real system lives.
-
-
-
-Feature set mirrors what you'd actually have in a real ranking model:
-- user <-> restaurant affinity (from embeddings, i.e. retrieval score)
-- distance
-- popularity / rating / price tier
-- time-of-day interaction (some cuisines skew lunch vs dinner)
-- personalization signal: user's explicit cuisine affinity for this restaurant's cuisine
-"""
 import numpy as np
 import pandas as pd
 import lightgbm as lgb

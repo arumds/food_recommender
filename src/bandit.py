@@ -1,23 +1,4 @@
-"""
-LinUCB contextual bandit for real-time re-ranking.
 
-The base ranker (LambdaMART) is trained offline on historical data and doesn't
-see real-time context (weather, time of day, active discounts) -- and can't
-adapt online as it learns which restaurants actually perform well under which
-conditions. A contextual bandit sits as a final re-ranking layer that:
-
-  1. Takes the base ranker's top-N candidates
-  2. Scores each candidate (an "arm") using a per-arm linear model over the
-     CURRENT context vector, with an upper-confidence-bound exploration term
-  3. Blends explore/exploit: arms with little data get an exploration boost,
-     arms with a well-estimated high reward get pushed up on merit
-  4. After the (simulated) outcome is observed, updates that arm's linear
-     model -- so the bandit *improves online*, unlike the static ranker.
-
-This is the LinUCB algorithm (Li et al., 2010 -- the standard contextual
-bandit formulation for exactly this kind of "which arm performs best under
-this context" problem, popularized by Yahoo's news article recommendation).
-"""
 import numpy as np
 
 

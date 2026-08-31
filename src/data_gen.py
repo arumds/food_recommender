@@ -1,19 +1,3 @@
-"""
-Synthetic data generator for a Wolt-like food delivery marketplace.
-
-Generates:
-- users            : customer profiles with cuisine affinity + location
-- restaurants      : restaurant catalog with cuisine, price tier, rating, location
-- interactions     : timestamped (user, restaurant) events -> click / order (implicit feedback)
-
-The data is synthetic but built with realistic structure:
-- users have latent cuisine preferences that drive their order behavior (so a
-  personalization model actually has signal to learn from)
-- restaurants have popularity, open-hours, and a "closed now" flag to support
-  the availability-constraint part of the pipeline
-- interactions have timestamps so we can do a time-based train/test split
-  (avoids leakage, mirrors how you'd evaluate this at a real company)
-"""
 import numpy as np
 import pandas as pd
 

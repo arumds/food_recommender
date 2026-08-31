@@ -1,17 +1,3 @@
-"""
-Post-ranking constraint layer: takes the ranker's ordered list and adjusts it for
-product/business needs that pure relevance-maximization ignores. This is the part
-of the JD that says: "balance relevance with product and customer needs, such as
-diversity, availability, business constraints and changing user intent."
-
-Implements:
-1. Availability filtering (hard constraint, applied BEFORE ranking ideally, but
-   shown here as a safety-net filter too)
-2. MMR (Maximal Marginal Relevance) diversification -- classic IR technique to
-   avoid a top-10 that's 8 pizza places just because the user loves pizza
-3. Business-rule boosting -- e.g. give small/local (non-chain) restaurants a
-   visibility boost, and show the relevance/business tradeoff explicitly
-"""
 import numpy as np
 
 

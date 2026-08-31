@@ -1,24 +1,3 @@
-"""
-Two-Tower Neural Network for retrieval (candidate generation).
-
-Unlike a simple matrix-factorization retriever (which only learns
-from the interaction id's themselves), this model builds each embedding from
-actual FEATURES:
-
-  User tower  input : [cuisine-affinity vector (10-d), normalized signup recency,
-                        lat, lon]
-  Item tower  input : [one-hot cuisine (10-d), popularity, rating, price_tier,
-                        avg_delivery_min, is_chain, lat, lon]
-
-Each tower is a small MLP mapping its raw features -> a shared d-dim embedding
-space. Training uses the same implicit-feedback setup as before (positive =
-ordered, sampled negatives = not ordered), but now with a proper binary
-cross-entropy loss over dot-product similarity, batched with PyTorch.
-
-This is the architecture referenced in production retrieval systems: two
-independently-servable towers (item embeddings can be precomputed and indexed
-offline; only the user tower needs to run at request time).
-"""
 import numpy as np
 import torch
 import torch.nn as nn

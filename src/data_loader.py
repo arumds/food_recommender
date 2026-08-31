@@ -1,10 +1,3 @@
-"""
-Loads previously-generated synthetic data from disk.
-
-If the expected CSVs aren't present, load_all() raises a clear error telling
-you to run the generation script first, rather than silently generating data
-as a fallback.
-"""
 import os
 import pandas as pd
 
