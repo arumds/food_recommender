@@ -144,9 +144,9 @@ git log --oneline
 Run `git show <hash>` on any commit to see that component's diff, or
 `git log -p -- src/two_tower.py` (etc.) to see a single file's history.
 
-## Mapping to the JD
+## Mapping the concepts to the code
 
-| JD concept | Where it lives |
+| Concept | Where it lives |
 |---|---|
 | **Retrieval** | `two_tower.py` + `faiss_index.py` — a real two-tower neural network with an approximate-NN index, benchmarked against exact search for recall and latency. |
 | **Ranking** | `ranking.py` — LightGBM LambdaMART (pairwise/listwise learning-to-rank), the same model family used in production ranking systems, evaluated with NDCG@K / MAP@K. |
