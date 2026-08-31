@@ -1,38 +1,3 @@
-"""
-Minimal FastAPI serving layer for the recommendation pipeline.
-
-This process ONLY LOADS previously-trained artifacts (from models/, produced
-by main_v2.py) -- it never trains anything itself. This mirrors real
-serving architecture: training is a periodic offline job; the online service
-loads whatever the most recent training run produced and answers requests
-against it within a tight latency budget.
-
-Request flow (mirrors the retrieval -> ranking -> constraints stages):
-
-  1. RETRIEVAL   : look up the user's precomputed embedding, do a FAISS HNSW
-                   search against precomputed restaurant embeddings -> ~50 candidates
-  2. RANKING     : build features for those candidates, score with the loaded
-                   LightGBM LambdaMART model
-  3. CONSTRAINTS : filter closed restaurants, optionally MMR-diversify,
-                   optionally boost small/local restaurants
-
-Deliberately NOT included here: the LinUCB contextual bandit and MMoE stages.
-The bandit is stateful (its parameters need to persist and update between
-requests, typically via a shared store like Redis) and MMoE would need its
-own saved artifact + loading code -- both are real engineering beyond what a
-"minimal" wrapper is meant to demonstrate. main_v2.py still evaluates both.
-
-Run:
-    python3 src/data_gen.py   # if you haven't already
-    python3 src/main_v2.py    # evaluates the full architecture AND saves models/
-    python3 src/serve.py      # starts the API on http://127.0.0.1:8000
-
-Then try:
-    curl "http://127.0.0.1:8000/recommend?user_id=0&hour=19&k=10"
-    curl "http://127.0.0.1:8000/health"
-
-Interactive API docs (FastAPI auto-generates these): http://127.0.0.1:8000/docs
-"""
 import os
 import sys
 import time
