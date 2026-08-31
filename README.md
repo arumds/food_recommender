@@ -73,7 +73,7 @@ ranking (LambdaMART) artifacts to `models/`** — the same run that evaluates
 the architecture produces what `serve.py` needs to serve it live, so there's
 no separate training step to remember to run.
 
-## Serving this online (minimal demo)
+## FastAPI demo
 
 `app.py` is a minimal demonstration of what serving those artifacts for real would look like:
 
