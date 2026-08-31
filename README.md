@@ -163,7 +163,7 @@ Run `git show <hash>` on any commit to see that component's diff, or
 | **Offline evaluation rigor** | Time-based (not random) train/test split to avoid leakage; Recall@K / NDCG@K / MAP@K implemented from scratch in `evaluate.py`. |
 | **Online experiment interpretation** | A toy Inverse Propensity Scoring (IPS) estimator, illustrating the offline-estimate-before-you-ship technique — explicitly flagged as **not** a substitute for a real A/B test. |
 
-## Honest caveats
+## Caveats
 
 - **This is synthetic data with a hand-built generative process** — it's built to have learnable structure, not to prove any specific algorithm is "best." Real data would have much messier, sparser, and non-stationary signal.
 - **Sample sizes here are small** (1500 users, 400 restaurants), so metric differences between methods can be noisy run-to-run — in a real setting you'd want confidence intervals or a proper significance test before concluding one approach beats another.
