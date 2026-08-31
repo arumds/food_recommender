@@ -3,11 +3,7 @@ Ranking stage: given the ~50-100 candidates retrieval produced for a user,
 learn to ORDER them by relevance. This is where most of the "recommendation
 quality" work in a real system lives.
 
-We train a LightGBM LambdaMART ranker (pairwise/listwise learning-to-rank --
-the same model family used in production ranking systems at most large
-marketplaces) on engineered features, grouped by user "query" (one query =
-one user's candidate list), predicting relative order preference rather than
-a single point estimate.
+
 
 Feature set mirrors what you'd actually have in a real ranking model:
 - user <-> restaurant affinity (from embeddings, i.e. retrieval score)
