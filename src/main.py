@@ -9,12 +9,11 @@ sys.path.insert(0, os.path.dirname(__file__))
 from data_loader import load_all
 from ranking_fe import build_ranking_features, build_candidate_features, time_split, train_ranker
 from two_tower import train_two_tower, TwoTowerRetriever
-from faiss_index import HNSWRetriever, benchmark_retrievers
+from faiss_index import HNSWRetriever
 from balance_relevance_constraints import filter_available, mmr_rerank, business_boost_rerank, intra_list_diversity, chain_share
-from context import sample_context, context_to_vector, CONTEXT_VECTOR_DIM
+from context import CONTEXT_VECTOR_DIM
 from bandit import simulate_bandit_vs_static
 from evaluate import evaluate_users
-from sklearn.metrics import roc_auc_score
 
 RESULTS = {}
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "outputs")
