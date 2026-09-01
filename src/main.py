@@ -87,7 +87,7 @@ def main():
     RESULTS["ranking_lift_over_retrieval_order_pct"] = ranking_lift_pct
 
     # =================================================================
-    section("SAVING MODEL ARTIFACTS (for serve.py)")
+    section("SAVING MODEL ARTIFACTS (for app.py)")
     # =================================================================
     os.makedirs(MODELS_DIR, exist_ok=True)
     np.save(os.path.join(MODELS_DIR, "user_embeddings.npy"), tt.user_emb.astype(np.float32))
