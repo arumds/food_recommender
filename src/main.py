@@ -74,14 +74,26 @@ def main():
     print(f"LambdaMART ranker over Two-Tower candidates: {ranker_metrics}")
     RESULTS["ranking_lambdamart"] = ranker_metrics
 
+    retrieval_order_recs = (
+        candidate_feat.sort_values(["user_id", "retrieval_rank"], ascending=[True, True])
+        .groupby("user_id")["restaurant_id"].apply(list).to_dict()
+    )
+    retrieval_order_metrics = evaluate_users(retrieval_order_recs, user_relevant, k=10)
+    print(f"Retrieval order truncated to top-10 (no re-ranking): {retrieval_order_metrics}")
+    RESULTS["retrieval_order_top10_baseline"] = retrieval_order_metrics
+
+    ranking_lift_pct = (
+        (ranker_metrics["Recall@10"] - retrieval_order_metrics["Recall@10"])
+        / retrieval_order_metrics["Recall@10"] * 100
+        if retrieval_order_metrics["Recall@10"] else None
+    )
+    print(f"LambdaMART re-ranking lift over retrieval-order baseline, same k=10, same pool: "
+          f"{ranking_lift_pct:.1f}%" if ranking_lift_pct is not None else "n/a")
+    RESULTS["ranking_lift_over_retrieval_order_pct"] = ranking_lift_pct
+
     # =================================================================
     section("SAVING MODEL ARTIFACTS (for serve.py)")
     # =================================================================
-    # Persist exactly what serve.py needs to answer live requests: the precomputed
-    # user/item embeddings, the FAISS index already built above (no need to rebuild
-    # it), the trained ranker, and the feature column order. This is the same
-    # offline-training-produces-an-artifact pattern as data_gen.py producing CSVs
-    # for the pipeline to load -- train once here, load repeatedly in serve.py.
     os.makedirs(MODELS_DIR, exist_ok=True)
     np.save(os.path.join(MODELS_DIR, "user_embeddings.npy"), tt.user_emb.astype(np.float32))
     np.save(os.path.join(MODELS_DIR, "item_embeddings.npy"), tt.item_emb.astype(np.float32))
