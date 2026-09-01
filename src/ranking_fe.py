@@ -17,10 +17,7 @@ def _haversine_km(lat1, lon1, lat2, lon2):
 
 
 def build_ranking_features(interactions, users, restaurants, embedding_retriever=None):
-    """
-    Join interaction events with user/restaurant features to build a training table.
-    Each row = one (user, restaurant) candidate pair with a relevance label (ordered 0/1).
-    """
+
     df = interactions.merge(users, on="user_id", suffixes=("", "_u"))
     df = df.merge(restaurants, on="restaurant_id", suffixes=("", "_r"))
 
@@ -85,26 +82,19 @@ def train_ranker(train_df, feature_cols, label_col="ordered", group_col="user_id
 
 
 def build_candidate_features(user_ids, candidate_lists, users, restaurants, hour, embedding_retriever=None):
-    """
-    Build a scoring table for arbitrary (user, candidate_restaurant) pairs -- i.e. the
-    output of a RETRIEVAL stage, not just restaurants the user happened to interact
-    with historically. This is what a real ranker scores at serve time: a candidate
-    pool per user, most of which the user has never ordered from before.
-
-    user_ids:       list of user_id
-    candidate_lists: list of lists, candidate_lists[i] = restaurant_ids retrieved for user_ids[i]
-    """
-    rows_user, rows_rest = [], []
+    rows_user, rows_rest, rows_rank = [], [], []
     for uid, cands in zip(user_ids, candidate_lists):
         rows_user.extend([uid] * len(cands))
         rows_rest.extend(cands)
+        rows_rank.extend(range(len(cands)))
 
-    df = pd.DataFrame({"user_id": rows_user, "restaurant_id": rows_rest})
+    df = pd.DataFrame({"user_id": rows_user, "restaurant_id": rows_rest, "retrieval_rank": rows_rank})
     df = df.merge(users, on="user_id", suffixes=("", "_u"))
     df = df.merge(restaurants, on="restaurant_id", suffixes=("", "_r"))
 
     def affinity_lookup(row):
         return row[f"affinity_{row['cuisine']}"]
+
     df["user_cuisine_affinity"] = df.apply(affinity_lookup, axis=1)
     df["distance_km"] = _haversine_km(df["lat"], df["lon"], df["lat_r"], df["lon_r"])
     df["is_lunch_hour"] = int(11 <= hour <= 14)
@@ -118,6 +108,8 @@ def build_candidate_features(user_ids, candidate_lists, users, restaurants, hour
         df["embedding_score"] = 0.0
 
     return df
+
+
 
 
 def train_baseline_popularity_ranker():
