@@ -1,0 +1,13 @@
+.git/
+__pycache__/
+*.pyc
+.DS_Store
+outputs/
+INTERVIEW_PREP.md
+README.md
+*.zip
+
+# data/ and models/ are mounted at runtime, not baked into the image --
+# excluded here so a stale local copy never gets accidentally included in a build.
+data/
+models/
