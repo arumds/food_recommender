@@ -51,10 +51,6 @@ def main():
     print(f"Two-Tower + FAISS HNSW retrieval: {tt_metrics}")
     RESULTS["retrieval_two_tower_hnsw"] = tt_metrics
 
-    bench = benchmark_retrievers(tt.user_emb, tt.item_emb, k=50, n_queries=300)
-    print(f"FAISS benchmark (recall of HNSW vs exact, latency): {bench}")
-    RESULTS["faiss_benchmark"] = bench
-
     # =================================================================
     section("RANKING: LightGBM LambdaMART over merged candidate pool")
     # =================================================================
