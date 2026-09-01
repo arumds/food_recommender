@@ -24,11 +24,11 @@ docker run -p 8000:8000 \
 From another terminal (not the one running the container):
 
 ```bash
-curl "http://127.0.0.1:8000/health"
-curl "http://127.0.0.1:8000/recommend?user_id=0&hour=19&k=10"
+curl "http://0.0.0.0:8000/health"
+curl "http://0.0.0.0:8000/recommend?user_id=0&hour=19&k=10"
 ```
 
-Or open `http://127.0.0.1:8000/docs` in a browser for FastAPI's interactive API explorer.
+Or open `http://0.0.0.0:8000/docs` in a browser for FastAPI's interactive API explorer.
 
 ## Stopping the container
 
