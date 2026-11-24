@@ -6,3 +6,4 @@ outputs/*.json
 .DS_Store
 .venv/
 .idea/
+models/
