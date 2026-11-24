@@ -4,6 +4,9 @@ Matrix factorization baseline (implicit ALS, Hu/Koren/Volinsky 2008).
 Pure collaborative filtering: only uses the user x restaurant order matrix,
 no user or restaurant features. Users with no orders get popular restaurants.
 """
+import json
+import os
+
 import numpy as np
 import scipy.sparse as sp
 
@@ -77,10 +80,36 @@ class ImplicitALS:
 
 
 class MFRetriever:
-    def __init__(self, als: ImplicitALS, R: sp.csr_matrix):
+    def __init__(self, als: ImplicitALS, R: sp.csr_matrix = None):
         self.als = als
-        self.user_n_orders = np.asarray(R.sum(axis=1)).ravel()
-        self.popular = np.argsort(-np.asarray(R.sum(axis=0)).ravel()).tolist()
+        if R is not None:
+            self.user_n_orders = np.asarray(R.sum(axis=1)).ravel()
+            self.popular = np.argsort(-np.asarray(R.sum(axis=0)).ravel()).tolist()
+
+    def save(self, model_dir):
+        np.savez(
+            os.path.join(model_dir, "mf_model.npz"),
+            user_factors=self.als.user_factors,
+            item_factors=self.als.item_factors,
+            user_n_orders=self.user_n_orders,
+            popular=np.asarray(self.popular),
+        )
+        config = {k: getattr(self.als, k)
+                  for k in ("n_factors", "reg", "alpha", "iterations", "seed")}
+        with open(os.path.join(model_dir, "mf_config.json"), "w") as f:
+            json.dump(config, f, indent=2)
+
+    @classmethod
+    def load(cls, model_dir):
+        with open(os.path.join(model_dir, "mf_config.json")) as f:
+            als = ImplicitALS(**json.load(f))
+        data = np.load(os.path.join(model_dir, "mf_model.npz"))
+        als.user_factors = data["user_factors"]
+        als.item_factors = data["item_factors"]
+        mf = cls(als)
+        mf.user_n_orders = data["user_n_orders"]
+        mf.popular = data["popular"].tolist()
+        return mf
 
     def is_cold(self, user_id):
         return self.user_n_orders[user_id] == 0
