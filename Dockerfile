@@ -11,7 +11,8 @@ RUN apt-get update \
 COPY requirements-app.txt .
 RUN pip install --no-cache-dir -r requirements-app.txt
 
-COPY src/app.py src/data_loader.py src/ranking_fe.py src/balance_relevance_constraints.py src/
+COPY src/app.py src/data_loader.py src/ranking_fe.py src/balance_relevance_constraints.py \
+     src/monitoring.py src/dashboard.html src/
 
 
 
