@@ -1,4 +1,9 @@
 import os
+
+# avoid libomp clash (faiss/torch/sklearn) segfault on macOS
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+
 import sys
 import json
 import numpy as np
@@ -14,6 +19,7 @@ from balance_relevance_constraints import filter_available, mmr_rerank, business
 from context import CONTEXT_VECTOR_DIM
 from bandit import simulate_bandit_vs_static
 from evaluate import evaluate_users
+from matrix_factorization import build_interaction_matrix, ImplicitALS, MFRetriever, popularity_recs
 
 RESULTS = {}
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "outputs")
@@ -49,6 +55,39 @@ def main():
     tt_metrics = evaluate_users(tt_recs, user_relevant, k=20)
     print(f"Two-Tower + FAISS HNSW retrieval: {tt_metrics}")
     RESULTS["retrieval_two_tower_hnsw"] = tt_metrics
+
+    # =================================================================
+    section("BASELINE: Matrix Factorization (implicit ALS) -- pure collaborative filtering")
+    # =================================================================
+    R_train = build_interaction_matrix(train_raw, n_users=len(users), n_items=len(restaurants))
+    print(f"Interaction matrix: {R_train.shape}, nnz={R_train.nnz}, "
+          f"density={R_train.nnz / (R_train.shape[0] * R_train.shape[1]):.4f}")
+    als = ImplicitALS(n_factors=16, reg=10.0, alpha=1.0, iterations=15).fit(R_train)
+    mf = MFRetriever(als, R_train)
+
+    mf_recs = {uid: mf.retrieve(uid, k=20) for uid in eval_users_list}
+    pop_recs = popularity_recs(R_train, eval_users_list, k=20)
+    mf_metrics = evaluate_users(mf_recs, user_relevant, k=20)
+    pop_metrics = evaluate_users(pop_recs, user_relevant, k=20)
+
+    warm_users = [u for u in eval_users_list if not mf.is_cold(u)]
+    cold_users = [u for u in eval_users_list if mf.is_cold(u)]
+    mf_warm = evaluate_users({u: mf_recs[u] for u in warm_users}, user_relevant, k=20)
+    mf_cold = evaluate_users({u: mf_recs[u] for u in cold_users}, user_relevant, k=20)
+    tt_warm = evaluate_users({u: tt_recs[u] for u in warm_users}, user_relevant, k=20)
+    tt_cold = evaluate_users({u: tt_recs[u] for u in cold_users}, user_relevant, k=20)
+
+    print(f"Popularity (non-personalized):  {pop_metrics}")
+    print(f"MF / ALS (CF only):             {mf_metrics}")
+    print(f"Two-Tower + HNSW (features):    {tt_metrics}")
+    print(f"Warm users ({len(warm_users)}) -- MF: {mf_warm} | Two-Tower: {tt_warm}")
+    print(f"Cold users ({len(cold_users)}, MF falls back to popularity) -- "
+          f"MF: {mf_cold} | Two-Tower: {tt_cold}")
+    RESULTS["retrieval_popularity_baseline"] = pop_metrics
+    RESULTS["retrieval_mf_als"] = mf_metrics
+    RESULTS["retrieval_warm_vs_cold"] = {
+        "mf_warm": mf_warm, "mf_cold": mf_cold, "two_tower_warm": tt_warm, "two_tower_cold": tt_cold,
+    }
 
     # =================================================================
     section("RANKING: LightGBM LambdaMART over merged candidate pool")
