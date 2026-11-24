@@ -4,3 +4,5 @@ data/*.csv
 outputs/*.json
 *.faiss
 .DS_Store
+.venv/
+.idea/
