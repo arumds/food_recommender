@@ -118,6 +118,31 @@ infrastructure beyond what a "minimal" demo is meant to show. It still runs
 and gets evaluated inside `main.py` — it's just not part of the servable
 API.
 
+## Monitoring
+
+`app.py` tracks its own health in-process (`src/monitoring.py`) and exposes it two ways:
+
+```bash
+curl "http://127.0.0.1:8000/monitoring"   # JSON snapshot
+open "http://127.0.0.1:8000/dashboard"    # auto-refreshing dashboard
+```
+
+| Signal | How it's measured | Alert when |
+|---|---|---|
+| Latency | p50/p95/p99 per stage (retrieval, ranking, constraints, total) over the last 5000 requests | `/recommend` p95 > `LATENCY_SLO_MS` (default 100) |
+| Feature drift | PSI of every ranker feature served vs. a reference snapshot `main.py` saves to `models/feature_reference.json` (quantile bins, or one bin per value for flags/categories) | PSI ≥ 0.25 (≥ 0.1 shows as warn) |
+| Model staleness | Age of `trained_at` in `models/model_metadata.json` | older than `MAX_MODEL_AGE_HOURS` (default 168) |
+| Errors | Status code counts | 5xx rate > 1% |
+
+The drift reference is the ranker input for retrieved candidates at hour 19,
+the same shape of data the API produces, not the training rows (retrieval
+favors popular/chain restaurants, so training rows would "drift" by design).
+Sending lunch-time traffic (`hour=12`) is an easy way to see a drift alert.
+
+Everything lives in memory per process, so it resets on restart and isn't
+shared across workers; in production these would be Prometheus metrics with
+Grafana dashboards and Alertmanager rules.
+
 ## Project structure
 
 ```
@@ -134,7 +159,9 @@ src/
   matrix_factorization.py  # implicit ALS baseline (pure collaborative filtering) + popularity baseline
   evaluate.py       # Recall@K, NDCG@K, MAP@K, + a toy IPS online-lift estimator
   main.py        # the pipeline runner -- evaluates every stage AND saves models/ artifacts
-  app.py          # FastAPI app -- loads models/ artifacts, serves /recommend and /health
+  app.py          # FastAPI app -- loads models/ artifacts, serves /recommend, /health, /monitoring, /dashboard
+  monitoring.py   # latency percentiles, feature drift (PSI), model staleness alerts
+  dashboard.html  # monitoring dashboard served at /dashboard
 data/            # generated CSVs (users, restaurants, interactions) -- created by data_gen.py
 models/          # trained artifacts (embeddings, FAISS index, ranker) -- created by main.py
 outputs/         # results_summary.json from the last run
@@ -186,4 +213,4 @@ Run `git show <hash>` on any commit to see that component's diff, or
   model to compromise between goals it wasn't designed to balance.
 - Swap in a real public dataset (Yelp Open Dataset, Instacart, H&M) instead of synthetic data.
 - Add a sequence-aware model (e.g. a simple GRU/SASRec-style session encoder) to capture *intent within a session*, not just static affinity.
-- Add basic monitoring/dashboarding around `app.py` (request latency percentiles, feature drift, model staleness alerts) to speak to the "production deployment and monitoring".
+- Export the monitoring metrics to Prometheus/Grafana instead of keeping them in-process.
