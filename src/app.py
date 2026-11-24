@@ -1,4 +1,9 @@
 import os
+
+# avoid libomp clash segfault on macOS
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+
 import sys
 import time
 import json
