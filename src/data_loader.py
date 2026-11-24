@@ -13,7 +13,7 @@ def _check_data_exists(data_dir: str):
             "Missing generated data file(s): " + ", ".join(missing) + "\n\n"
             "Data generation is a separate step from the recommender pipeline.\n"
             "Run this first, then re-run your pipeline script:\n\n"
-            "    python3 src/data_gen.py\n\n"
+            "    python3 data_generation/data_gen.py\n\n"
             f"Expected data directory: {data_dir}"
         )
 
