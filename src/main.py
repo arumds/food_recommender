@@ -6,6 +6,7 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 import sys
 import json
+from datetime import datetime, timezone
 import numpy as np
 import faiss
 
@@ -20,6 +21,7 @@ from context import CONTEXT_VECTOR_DIM
 from bandit import simulate_bandit_vs_static
 from evaluate import evaluate_users
 from matrix_factorization import build_interaction_matrix, ImplicitALS, MFRetriever, popularity_recs
+from monitoring import build_feature_reference
 
 RESULTS = {}
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "outputs")
@@ -136,9 +138,27 @@ def main():
     with open(os.path.join(MODELS_DIR, "feature_cols.json"), "w") as f:
         json.dump(feature_cols, f)
     mf.save(MODELS_DIR)
+
+    # drift reference = features of served candidates (retrieval -> ranker input), matching what app.py sees
+    reference = build_feature_reference(
+        candidate_feat, feature_cols, source=f"served candidates for {len(eval_users_list)} eval users, hour=19"
+    )
+    with open(os.path.join(MODELS_DIR, "feature_reference.json"), "w") as f:
+        json.dump(reference, f, indent=2)
+    metadata = {
+        "trained_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "n_users": int(len(users)),
+        "n_restaurants": int(len(restaurants)),
+        "n_train_interactions": int(len(train_raw)),
+        "ranker_recall_at_10": ranker_metrics["Recall@10"],
+        "retrieval_recall_at_20": tt_metrics["Recall@20"],
+    }
+    with open(os.path.join(MODELS_DIR, "model_metadata.json"), "w") as f:
+        json.dump(metadata, f, indent=2)
+
     print(f"Saved retrieval + ranking artifacts to: {MODELS_DIR}")
-    print("  user_embeddings.npy, item_embeddings.npy, restaurant_index.faiss, "
-          "ranker.txt, feature_cols.json, mf_model.npz, mf_config.json")
+    print("  user_embeddings.npy, item_embeddings.npy, restaurant_index.faiss, ranker.txt, "
+          "feature_cols.json, mf_model.npz, mf_config.json, feature_reference.json, model_metadata.json")
 
     # =================================================================
     section("CONSTRAINTS: availability, diversity (MMR), business boost")
