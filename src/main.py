@@ -6,6 +6,7 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 import sys
 import json
+import pickle
 import numpy as np
 import faiss
 
@@ -129,15 +130,19 @@ def main():
     section("SAVING MODEL ARTIFACTS (for app.py)")
     # =================================================================
     os.makedirs(MODELS_DIR, exist_ok=True)
-    np.save(os.path.join(MODELS_DIR, "user_embeddings.npy"), tt.user_emb.astype(np.float32))
-    np.save(os.path.join(MODELS_DIR, "item_embeddings.npy"), tt.item_emb.astype(np.float32))
+    def save_pickle(obj, name):
+        with open(os.path.join(MODELS_DIR, name), "wb") as f:
+            pickle.dump(obj, f)
+
+    save_pickle(tt.user_emb.astype(np.float32), "user_embeddings.pkl")
+    save_pickle(tt.item_emb.astype(np.float32), "item_embeddings.pkl")
+    save_pickle(ranker, "ranker.pkl")
+    save_pickle(feature_cols, "feature_cols.pkl")
+    save_pickle(mf, "mf_model.pkl")
     faiss.write_index(hnsw_index.index, os.path.join(MODELS_DIR, "restaurant_index.faiss"))
-    ranker.save_model(os.path.join(MODELS_DIR, "ranker.txt"))
-    with open(os.path.join(MODELS_DIR, "feature_cols.json"), "w") as f:
-        json.dump(feature_cols, f)
     print(f"Saved retrieval + ranking artifacts to: {MODELS_DIR}")
-    print("  user_embeddings.npy, item_embeddings.npy, restaurant_index.faiss, "
-          "ranker.txt, feature_cols.json")
+    print("  user_embeddings.pkl, item_embeddings.pkl, ranker.pkl, feature_cols.pkl, "
+          "mf_model.pkl, restaurant_index.faiss")
 
     # =================================================================
     section("CONSTRAINTS: availability, diversity (MMR), business boost")
