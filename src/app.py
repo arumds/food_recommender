@@ -6,12 +6,13 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 import sys
 import time
-import pickle
+import json
 from contextlib import asynccontextmanager
 
 import numpy as np
 import pandas as pd
 import faiss
+import lightgbm as lgb
 import uvicorn
 from fastapi import FastAPI, HTTPException, Query
 
@@ -27,8 +28,8 @@ STATE = {}  # populated at startup: model artifacts + reference data
 
 
 def load_artifacts():
-    required = ["user_embeddings.pkl", "item_embeddings.pkl", "restaurant_index.faiss",
-                "ranker.pkl", "feature_cols.pkl"]
+    required = ["user_embeddings.npy", "item_embeddings.npy", "restaurant_index.faiss",
+                "ranker.txt", "feature_cols.json"]
     missing = [f for f in required if not os.path.exists(os.path.join(MODELS_DIR, f))]
     if missing:
         raise FileNotFoundError(
@@ -37,15 +38,12 @@ def load_artifacts():
             f"Expected models directory: {MODELS_DIR}"
         )
 
-    def load_pickle(name):
-        with open(os.path.join(MODELS_DIR, name), "rb") as f:
-            return pickle.load(f)
-
-    user_emb = load_pickle("user_embeddings.pkl")
-    item_emb = load_pickle("item_embeddings.pkl")
-    ranker = load_pickle("ranker.pkl")
-    feature_cols = load_pickle("feature_cols.pkl")
+    user_emb = np.load(os.path.join(MODELS_DIR, "user_embeddings.npy"))
+    item_emb = np.load(os.path.join(MODELS_DIR, "item_embeddings.npy"))
     index = faiss.read_index(os.path.join(MODELS_DIR, "restaurant_index.faiss"))
+    ranker = lgb.Booster(model_file=os.path.join(MODELS_DIR, "ranker.txt"))
+    with open(os.path.join(MODELS_DIR, "feature_cols.json")) as f:
+        feature_cols = json.load(f)
 
     users, restaurants, _interactions = load_all()
 
