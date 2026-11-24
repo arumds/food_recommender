@@ -14,15 +14,19 @@ import pandas as pd
 import faiss
 import lightgbm as lgb
 import uvicorn
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import FileResponse
 
 sys.path.insert(0, os.path.dirname(__file__))
 
 from data_loader import load_all
 from ranking_fe import build_candidate_features
 from balance_relevance_constraints import filter_available, mmr_rerank, business_boost_rerank
+from monitoring import Monitor
 
 MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models")
+DASHBOARD_HTML = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dashboard.html")
+MONITORED_PATHS = {"/recommend", "/health"}
 
 STATE = {}  # populated at startup: model artifacts + reference data
 
@@ -62,12 +66,39 @@ def load_artifacts():
 async def lifespan(app: FastAPI):
     print("Loading trained artifacts...")
     STATE.update(load_artifacts())
+    STATE["monitor"] = Monitor(MODELS_DIR)
     print(f"Ready: {len(STATE['users'])} users, {len(STATE['restaurants'])} restaurants loaded.")
     yield
     STATE.clear()
 
 
 app = FastAPI(title="PlateMatch - Matching users to restaurants/dishes, Recommendation API (demo)", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def track_requests(request: Request, call_next):
+    t0 = time.perf_counter()
+    status = 500
+    try:
+        response = await call_next(request)
+        status = response.status_code
+        return response
+    finally:
+        monitor = STATE.get("monitor")
+        if monitor and request.url.path in MONITORED_PATHS:
+            monitor.record_request(request.url.path, status, (time.perf_counter() - t0) * 1000)
+
+
+@app.get("/monitoring")
+def monitoring():
+    if not STATE:
+        raise HTTPException(status_code=503, detail="Models not loaded yet")
+    return STATE["monitor"].snapshot()
+
+
+@app.get("/dashboard", include_in_schema=False)
+def dashboard():
+    return FileResponse(DASHBOARD_HTML)
 
 
 @app.get("/health")
@@ -112,6 +143,7 @@ def recommend(
         [user_id], [candidate_ids], STATE["users"], STATE["restaurants"], hour=hour, embedding_retriever=None
     )
     candidate_feat["rank_score"] = STATE["ranker"].predict(candidate_feat[STATE["feature_cols"]])
+    STATE["monitor"].record_features(candidate_feat[STATE["feature_cols"]])
     timings["ranking_ms"] = (time.perf_counter() - t0) * 1000
 
     # ---------------- 3. CONSTRAINTS ----------------
@@ -128,6 +160,7 @@ def recommend(
         final["final_score"] = final["rank_score"]
     timings["constraints_ms"] = (time.perf_counter() - t0) * 1000
     timings["total_ms"] = (time.perf_counter() - t_start) * 1000
+    STATE["monitor"].record_stage_timings("/recommend", timings)
 
     results = [
         {
