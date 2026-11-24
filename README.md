@@ -30,7 +30,7 @@ instead of comparing against a freshly-randomized dataset each time.
 
 ```bash
 # Step 1: generate the dataset (run once, or re-run any time you want a fresh dataset)
-python3 src/data_gen.py
+python3 data_generation/data_gen.py
 
 # Step 2: run the pipeline against whatever is currently in data/
 python3 src/main.py
@@ -78,7 +78,7 @@ no separate training step to remember to run.
 `app.py` is a minimal demonstration of what serving those artifacts for real would look like:
 
 ```bash
-python3 src/data_gen.py    # if you haven't already
+python3 data_generation/data_gen.py    # if you haven't already
 python3 src/main.py     # evaluates everything AND saves models/
 python3 src/app.py       # starts a FastAPI server on http://127.0.0.1:8000       
 ```
@@ -121,8 +121,9 @@ API.
 ## Project structure
 
 ```
+data_generation/
+  data_gen.py       # STANDALONE data-generation script. Only writes data/*.csv; never imported by the pipeline.
 src/
-  data_gen.py       # STANDALONE data-generation script. Only writes data/*.csv; never imported by the pipeline for generation.
   data_loader.py    # Loads data/*.csv for the pipeline. Only reads; never generates. Fails loudly if data_gen.py hasn't run yet.
   two_tower.py      # PyTorch Two-Tower NN retriever (consumes user/restaurant side features)
   faiss_index.py    # FAISS FlatIP (exact) + HNSW (approximate) ANN indexes
@@ -130,6 +131,7 @@ src/
   constraints.py    # availability filtering, MMR diversity re-ranking, business-rule boosting
   context.py        # synthetic real-time context (weather/time-of-day/discount) + reward model
   bandit.py         # LinUCB contextual bandit re-ranker
+  matrix_factorization.py  # implicit ALS baseline (pure collaborative filtering) + popularity baseline
   evaluate.py       # Recall@K, NDCG@K, MAP@K, + a toy IPS online-lift estimator
   main.py        # the pipeline runner -- evaluates every stage AND saves models/ artifacts
   app.py          # FastAPI app -- loads models/ artifacts, serves /recommend and /health
