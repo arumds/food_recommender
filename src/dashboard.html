@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PlateMatch Monitoring</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --card: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --border: #e2e2dd;
+    --ok: #2e7d4f; --warn: #b7791f; --alert: #c0392b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161615; --card: #20201e; --text: #ececea; --muted: #9a9a94; --border: #34342f;
+            --ok: #5cb88a; --warn: #e0a84a; --alert: #e5675a; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px; background: var(--bg); color: var(--text);
+         font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 12px; }
+  .sub { color: var(--muted); margin-bottom: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px; overflow-x: auto; }
+  .stat { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .label { color: var(--muted); font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  td.num, th.num { text-align: right; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .ok { color: var(--ok); } .warn { color: var(--warn); } .alert { color: var(--alert); } .na { color: var(--muted); }
+  .pill.ok { background: color-mix(in srgb, var(--ok) 15%, transparent); }
+  .pill.warn { background: color-mix(in srgb, var(--warn) 15%, transparent); }
+  .pill.alert { background: color-mix(in srgb, var(--alert) 15%, transparent); }
+  ul.alerts { margin: 0; padding-left: 18px; }
+  ul.alerts li { color: var(--alert); margin: 2px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>PlateMatch monitoring</h1>
+  <div class="sub" id="updated">Loading…</div>
+
+  <div class="card"><h2>Alerts</h2><div id="alerts"></div></div>
+
+  <div class="grid" id="stats"></div>
+
+  <div class="card"><h2>Latency (ms, rolling window)</h2><table id="latency"></table></div>
+  <div class="card"><h2>Feature drift (PSI vs reference)</h2><div class="label" id="drift-ref"></div><table id="drift"></table></div>
+  <div class="card"><h2>Model</h2><table id="model"></table></div>
+</main>
+<script>
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const pill = s => `<span class="pill ${s === "n/a" ? "na" : s}">${esc(s)}</span>`;
+const fmt = v => v === null || v === undefined ? "–" : esc(v);
+
+function render(m) {
+  document.getElementById("updated").textContent =
+    `Updated ${new Date().toLocaleTimeString()} · uptime ${Math.round(m.uptime_s)}s · refreshes every 5s`;
+
+  document.getElementById("alerts").innerHTML = m.alerts.length
+    ? `<ul class="alerts">${m.alerts.map(a => `<li>${esc(a)}</li>`).join("")}</ul>`
+    : `<span class="ok">No active alerts</span>`;
+
+  const total = m.latency_ms["/recommend:total_ms"] || {};
+  const errors = Object.entries(m.status_codes).filter(([c]) => +c >= 500).reduce((s, [, n]) => s + n, 0);
+  const stale = m.model.staleness || {};
+  const stats = [
+    ["Requests", m.requests_total], ["Last 60s", m.requests_last_60s],
+    ["p95 /recommend", total.p95 !== undefined ? `${total.p95} ms` : "–"],
+    ["5xx errors", errors], ["Model age", stale.age_hours !== null && stale.age_hours !== undefined ? `${stale.age_hours} h` : "–"],
+  ];
+  document.getElementById("stats").innerHTML = stats.map(([l, v]) =>
+    `<div class="card" style="margin:0"><div class="label">${l}</div><div class="stat">${fmt(v)}</div></div>`).join("");
+
+  const lat = Object.entries(m.latency_ms);
+  document.getElementById("latency").innerHTML =
+    `<tr><th>series</th><th class="num">count</th><th class="num">p50</th><th class="num">p95</th><th class="num">p99</th><th class="num">max</th></tr>` +
+    (lat.length ? lat.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${v.count}</td><td class="num">${v.p50}</td>
+      <td class="num ${k === "/recommend:total_ms" && v.p95 > m.latency_slo_ms ? "alert" : ""}">${v.p95}</td>
+      <td class="num">${v.p99}</td><td class="num">${v.max}</td></tr>`).join("")
+      : `<tr><td colspan="6" class="na">No requests yet</td></tr>`);
+
+  const ref = m.drift_reference || {};
+  document.getElementById("drift-ref").textContent = ref.source
+    ? `Reference: ${ref.source} (${ref.n_rows} rows). PSI ≥ 0.1 warn, ≥ 0.25 alert.` : "No feature_reference.json found; rerun main.py.";
+  const drift = Object.entries(m.feature_drift);
+  document.getElementById("drift").innerHTML =
+    `<tr><th>feature</th><th class="num">live samples</th><th class="num">ref mean</th><th class="num">live mean</th><th class="num">PSI</th><th>status</th></tr>` +
+    drift.map(([f, d]) => `<tr><td>${esc(f)}</td><td class="num">${d.n}</td><td class="num">${fmt(d.reference_mean)}</td>
+      <td class="num">${fmt(d.live_mean)}</td><td class="num">${fmt(d.psi)}</td><td>${pill(d.status)}</td></tr>`).join("");
+
+  const model = Object.entries(m.model).filter(([k]) => k !== "staleness");
+  document.getElementById("model").innerHTML =
+    model.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(typeof v === "object" ? JSON.stringify(v) : v)}</td></tr>`).join("") +
+    `<tr><td>staleness</td><td>${pill(stale.status || "n/a")} max ${fmt(stale.max_age_hours)} h</td></tr>`;
+}
+
+async function refresh() {
+  try {
+    const r = await fetch("/monitoring");
+    if (!r.ok) throw new Error(r.status);
+    render(await r.json());
+  } catch (e) {
+    document.getElementById("updated").innerHTML = `<span class="alert">Could not reach /monitoring (${esc(e.message)})</span>`;
+  }
+}
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>
